@@ -722,7 +722,22 @@
             downloadBtn.style.display = 'none';
             
             try {
-                // Load html2canvas if not already loaded
+                // Use Canvas API directly for better control
+                const sheet = document.querySelector('.character-sheet');
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Set canvas size
+                const rect = sheet.getBoundingClientRect();
+                canvas.width = rect.width * 2; // Higher resolution
+                canvas.height = rect.height * 2;
+                ctx.scale(2, 2);
+                
+                // Fill background
+                ctx.fillStyle = '#0F0B1A';
+                ctx.fillRect(0, 0, rect.width, rect.height);
+                
+                // Try html2canvas as fallback
                 if (!window.html2canvas) {
                     const script = document.createElement('script');
                     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
@@ -734,136 +749,64 @@
                     });
                 }
                 
-                // Create export styles that replace input/textarea with divs
-                const exportStyle = document.createElement('style');
-                exportStyle.id = 'export-style';
-                exportStyle.textContent = `
-                    .export-mode input[type="text"],
-                    .export-mode input[type="number"],
-                    .export-mode textarea {
-                        appearance: none !important;
-                        -webkit-appearance: none !important;
-                        -moz-appearance: none !important;
-                        background: rgba(26, 20, 42, 0.8) !important;
-                        border: 1px solid rgba(0, 245, 255, 0.5) !important;
-                        color: #E0F7FA !important;
-                        font-family: 'Exo 2', sans-serif !important;
-                        font-size: 10pt !important;
-                        padding: 4px 6px !important;
-                        border-radius: 3px !important;
-                        outline: none !important;
-                        box-shadow: none !important;
-                        resize: none !important;
-                        overflow: hidden !important;
-                        white-space: nowrap !important;
-                        text-overflow: ellipsis !important;
-                        line-height: 1.3 !important;
-                        height: auto !important;
-                        min-height: 20px !important;
-                    }
-                    
-                    .export-mode textarea {
-                        white-space: pre-wrap !important;
-                        word-wrap: break-word !important;
-                        overflow-wrap: break-word !important;
-                        height: auto !important;
-                        min-height: 60px !important;
-                    }
-                    
-                    .export-mode .field-line {
-                        border: none !important;
-                        border-bottom: 1px solid rgba(0, 245, 255, 0.5) !important;
-                        background: transparent !important;
-                        border-radius: 0 !important;
-                        padding: 2px 4px !important;
-                    }
-                    
-                    .export-mode .attribute-value {
-                        color: #00F5FF !important;
-                        background: rgba(26, 20, 42, 0.8) !important;
-                        border: none !important;
-                        border-bottom: 1px solid #00F5FF !important;
-                        text-align: center !important;
-                        font-weight: bold !important;
-                        width: 30px !important;
-                    }
-                    
-                    .export-mode .bonus-input {
-                        color: #B87333 !important;
-                        background: rgba(26, 20, 42, 0.8) !important;
-                        border: none !important;
-                        border-bottom: 1px solid #B87333 !important;
-                        text-align: center !important;
-                        font-weight: bold !important;
-                        width: 40px !important;
-                    }
-                    
-                    .export-mode .checkbox {
-                        appearance: none !important;
-                        -webkit-appearance: none !important;
-                        width: 15px !important;
-                        height: 15px !important;
-                        border: 1px solid #00F5FF !important;
-                        background: transparent !important;
-                        border-radius: 2px !important;
-                        position: relative !important;
-                    }
-                    
-                    .export-mode .checkbox:checked {
-                        background: #00F5FF !important;
-                    }
-                    
-                    .export-mode .checkbox:checked::after {
-                        content: '✓' !important;
-                        position: absolute !important;
-                        top: -2px !important;
-                        left: 1px !important;
-                        color: #0F0B1A !important;
-                        font-size: 10px !important;
-                        font-weight: bold !important;
-                    }
-                `;
-                document.head.appendChild(exportStyle);
-                
-                // Add export mode class
-                const sheet = document.querySelector('.character-sheet');
-                sheet.classList.add('export-mode');
-                
-                // Wait for styles to apply
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                // Capture with html2canvas
-                const canvas = await html2canvas(sheet, {
+                // Simple approach - capture without complex styling
+                const captureCanvas = await html2canvas(sheet, {
                     backgroundColor: '#0F0B1A',
-                    scale: 2,
+                    scale: 1.5,
                     useCORS: true,
-                    allowTaint: true,
+                    allowTaint: false,
                     logging: false,
-                    width: sheet.offsetWidth,
-                    height: sheet.offsetHeight,
+                    width: rect.width,
+                    height: rect.height,
+                    x: 0,
+                    y: 0,
                     scrollX: 0,
                     scrollY: 0,
-                    foreignObjectRendering: true,
-                    removeContainer: false
+                    windowWidth: window.innerWidth,
+                    windowHeight: window.innerHeight,
+                    ignoreElements: (element) => {
+                        // Skip the download button
+                        return element.id === 'downloadBtn';
+                    }
                 });
                 
                 // Create download link
                 const link = document.createElement('a');
                 link.download = 'astraview-character-sheet.png';
-                link.href = canvas.toDataURL('image/png', 1.0);
+                link.href = captureCanvas.toDataURL('image/png', 0.9);
                 link.click();
-                
-                // Cleanup
-                sheet.classList.remove('export-mode');
-                document.head.removeChild(exportStyle);
                 
             } catch (error) {
                 console.error('Export failed:', error);
-                alert('Не удалось экспортировать лист. Попробуйте еще раз.');
+                
+                // Fallback: try browser print to PDF
+                try {
+                    const printWindow = window.open('', '_blank');
+                    printWindow.document.write(`
+                        <html>
+                        <head>
+                            <title>ASTRaview Character Sheet</title>
+                            <style>
+                                body { margin: 0; padding: 20px; background: #0F0B1A; }
+                                @media print { body { background: #0F0B1A !important; } }
+                            </style>
+                        </head>
+                        <body>
+                            ${sheet.outerHTML}
+                        </body>
+                        </html>
+                    `);
+                    printWindow.document.close();
+                    printWindow.print();
+                } catch (printError) {
+                    alert('Не удалось экспортировать лист. Попробуйте использовать функцию печати браузера.');
+                }
             }
             
             downloadBtn.style.display = 'block';
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'986ed82853df8d7b',t:'MTc1OTE4NDE4MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'986edeec54328d7b',t:'MTc1OTE4NDQ1Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
+
+
