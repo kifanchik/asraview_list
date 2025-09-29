@@ -326,6 +326,41 @@
             text-shadow: 0 0 5px currentColor;
         }
 
+        .inventory-detailed {
+            margin-top: 8mm;
+        }
+
+        .inventory-sections {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .inventory-column {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .item-entry {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 8px;
+            gap: 0;
+        }
+
+        .artifact-entry {
+            background: rgba(26, 20, 42, 0.4);
+            border-radius: 6px;
+            padding: 8px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(184, 115, 51, 0.3);
+        }
+
+        .item-list, .artifact-list {
+            display: flex;
+            flex-direction: column;
+        }
+
         @media print {
             .character-sheet {
                 margin: 0;
@@ -408,19 +443,19 @@
                     <div class="attributes-table">
                         <div class="attribute-item">
                             <span class="attribute-name">🧠 Разум:</span>
-                            <input type="number" class="attribute-value" min="1" max="4">
+                            <input type="number" class="attribute-value" min="1">
                         </div>
                         <div class="attribute-item">
                             <span class="attribute-name">💪 Воля:</span>
-                            <input type="number" class="attribute-value" min="1" max="4">
+                            <input type="number" class="attribute-value" min="1">
                         </div>
                         <div class="attribute-item">
                             <span class="attribute-name">🦾 Конечности:</span>
-                            <input type="number" class="attribute-value" min="1" max="4">
+                            <input type="number" class="attribute-value" min="1">
                         </div>
                         <div class="attribute-item">
                             <span class="attribute-name">❤️ Плоть:</span>
-                            <input type="number" class="attribute-value" min="1" max="4">
+                            <input type="number" class="attribute-value" min="1">
                         </div>
                     </div>
                 </div>
@@ -572,6 +607,51 @@
                     <input type="number" class="field-input" style="width: 60px;" min="0">
                 </div>
             </div>
+
+            <div class="separator"></div>
+
+            <div class="inventory-detailed">
+                <div class="section-title" style="margin-bottom: 8mm;">Детальный инвентарь</div>
+                
+                <div class="inventory-sections">
+                    <div class="inventory-column">
+                        <h4 style="color: #00F5FF; margin-bottom: 8px; font-size: 11pt;">📦 Предметы и снаряжение:</h4>
+                        <div class="item-list">
+                            <textarea class="field-input" placeholder="Список всех предметов, инструментов, снаряжения и прочих вещей персонажа..." rows="12" style="resize: vertical; width: 100%;"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="inventory-column">
+                        <h4 style="color: #B87333; margin-bottom: 8px; font-size: 11pt;">✨ Артефакты и особые предметы:</h4>
+                        <div class="artifact-list">
+                            <div class="artifact-entry">
+                                <input type="text" class="field-input" placeholder="Название артефакта" style="margin-bottom: 4px;">
+                                <div style="display: flex; gap: 8px; margin-bottom: 4px;">
+                                    <input type="text" class="field-input" placeholder="Тип" style="flex: 1;">
+                                    <input type="text" class="field-input" placeholder="Редкость" style="flex: 1;">
+                                </div>
+                                <textarea class="field-input" placeholder="Эффект и описание" rows="2" style="resize: vertical;"></textarea>
+                            </div>
+                            <div class="artifact-entry">
+                                <input type="text" class="field-input" placeholder="Название артефакта" style="margin-bottom: 4px;">
+                                <div style="display: flex; gap: 8px; margin-bottom: 4px;">
+                                    <input type="text" class="field-input" placeholder="Тип" style="flex: 1;">
+                                    <input type="text" class="field-input" placeholder="Редкость" style="flex: 1;">
+                                </div>
+                                <textarea class="field-input" placeholder="Эффект и описание" rows="2" style="resize: vertical;"></textarea>
+                            </div>
+                            <div class="artifact-entry">
+                                <input type="text" class="field-input" placeholder="Название артефакта" style="margin-bottom: 4px;">
+                                <div style="display: flex; gap: 8px; margin-bottom: 4px;">
+                                    <input type="text" class="field-input" placeholder="Тип" style="flex: 1;">
+                                    <input type="text" class="field-input" placeholder="Редкость" style="flex: 1;">
+                                </div>
+                                <textarea class="field-input" placeholder="Эффект и описание" rows="2" style="resize: vertical;"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -639,58 +719,92 @@
         const downloadBtn = document.getElementById('downloadBtn');
         
         downloadBtn.addEventListener('click', async () => {
-            // Create canvas
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
+            // Temporarily hide the download button for cleaner export
+            downloadBtn.style.display = 'none';
             
-            // Set canvas size (A4 proportions at 300 DPI)
-            canvas.width = 2480;
-            canvas.height = 3508;
+            // Create a temporary clone for export
+            const originalSheet = document.querySelector('.character-sheet');
+            const cloneSheet = originalSheet.cloneNode(true);
             
-            // Scale factor for high resolution
-            const scale = canvas.width / document.querySelector('.character-sheet').offsetWidth;
+            // Apply styles to make text visible in export
+            const style = document.createElement('style');
+            style.textContent = `
+                .export-sheet input, .export-sheet textarea {
+                    color: #E0F7FA !important;
+                    background: rgba(26, 20, 42, 0.8) !important;
+                    border: 1px solid rgba(0, 245, 255, 0.5) !important;
+                    font-family: 'Exo 2', sans-serif !important;
+                    font-size: 10pt !important;
+                }
+                .export-sheet .attribute-value {
+                    color: #00F5FF !important;
+                    background: rgba(26, 20, 42, 0.8) !important;
+                }
+                .export-sheet .bonus-input {
+                    color: #B87333 !important;
+                    background: rgba(26, 20, 42, 0.8) !important;
+                }
+                .export-sheet {
+                    position: fixed;
+                    top: -10000px;
+                    left: 0;
+                    z-index: -1;
+                    width: 210mm;
+                    background: #0F0B1A !important;
+                }
+            `;
+            document.head.appendChild(style);
             
-            // Fill background
-            ctx.fillStyle = '#0F0B1A';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            cloneSheet.classList.add('export-sheet');
+            document.body.appendChild(cloneSheet);
+            
+            // Wait for fonts and styles to load
+            await new Promise(resolve => setTimeout(resolve, 500));
             
             // Use html2canvas library for better rendering
             try {
-                const script = document.createElement('script');
-                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-                document.head.appendChild(script);
-                
-                script.onload = () => {
-                    html2canvas(document.querySelector('.character-sheet'), {
-                        backgroundColor: '#0F0B1A',
-                        scale: 2,
-                        useCORS: true,
-                        allowTaint: true
-                    }).then(canvas => {
-                        // Create download link
-                        const link = document.createElement('a');
-                        link.download = 'character-sheet.png';
-                        link.href = canvas.toDataURL('image/png');
-                        link.click();
+                // Load html2canvas if not already loaded
+                if (!window.html2canvas) {
+                    const script = document.createElement('script');
+                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+                    document.head.appendChild(script);
+                    
+                    await new Promise((resolve, reject) => {
+                        script.onload = resolve;
+                        script.onerror = reject;
                     });
-                };
-            } catch (error) {
-                // Fallback method without external library
-                const rect = document.querySelector('.character-sheet').getBoundingClientRect();
-                ctx.scale(scale, scale);
+                }
                 
-                // Simple text rendering as fallback
-                ctx.fillStyle = '#E0F7FA';
-                ctx.font = '16px Exo 2';
-                ctx.fillText('Character Sheet Export', 50, 50);
-                ctx.fillText('(Для лучшего качества используйте современный браузер)', 50, 80);
+                const canvas = await html2canvas(cloneSheet, {
+                    backgroundColor: '#0F0B1A',
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true,
+                    width: cloneSheet.offsetWidth,
+                    height: cloneSheet.offsetHeight,
+                    scrollX: 0,
+                    scrollY: 0,
+                    windowWidth: cloneSheet.offsetWidth,
+                    windowHeight: cloneSheet.offsetHeight
+                });
                 
+                // Create download link
                 const link = document.createElement('a');
-                link.download = 'character-sheet.png';
-                link.href = canvas.toDataURL('image/png');
+                link.download = 'astraview-character-sheet.png';
+                link.href = canvas.toDataURL('image/png', 1.0);
                 link.click();
+                
+            } catch (error) {
+                console.error('Export failed:', error);
+                alert('Не удалось экспортировать лист. Попробуйте еще раз или используйте другой браузер.');
             }
+            
+            // Cleanup
+            document.body.removeChild(cloneSheet);
+            document.head.removeChild(style);
+            downloadBtn.style.display = 'block';
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'986ea3bbb12a8d59',t:'MTc1OTE4MjAzMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'986ed003a7cf8d7b',t:'MTc1OTE4Mzg0Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
+
