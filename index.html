@@ -715,96 +715,379 @@
             }
         });
 
-        // Download as PNG functionality
+        // Download as PNG functionality - completely new approach
         const downloadBtn = document.getElementById('downloadBtn');
         
         downloadBtn.addEventListener('click', async () => {
-            downloadBtn.style.display = 'none';
-            
             try {
-                // Use Canvas API directly for better control
                 const sheet = document.querySelector('.character-sheet');
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
                 
-                // Set canvas size
-                const rect = sheet.getBoundingClientRect();
-                canvas.width = rect.width * 2; // Higher resolution
-                canvas.height = rect.height * 2;
-                ctx.scale(2, 2);
+                // Create a new window for clean capture
+                const printWindow = window.open('', '_blank', 'width=800,height=1200');
                 
-                // Fill background
-                ctx.fillStyle = '#0F0B1A';
-                ctx.fillRect(0, 0, rect.width, rect.height);
-                
-                // Try html2canvas as fallback
-                if (!window.html2canvas) {
-                    const script = document.createElement('script');
-                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-                    document.head.appendChild(script);
-                    
-                    await new Promise((resolve, reject) => {
-                        script.onload = resolve;
-                        script.onerror = reject;
-                    });
-                }
-                
-                // Simple approach - capture without complex styling
-                const captureCanvas = await html2canvas(sheet, {
-                    backgroundColor: '#0F0B1A',
-                    scale: 1.5,
-                    useCORS: true,
-                    allowTaint: false,
-                    logging: false,
-                    width: rect.width,
-                    height: rect.height,
-                    x: 0,
-                    y: 0,
-                    scrollX: 0,
-                    scrollY: 0,
-                    windowWidth: window.innerWidth,
-                    windowHeight: window.innerHeight,
-                    ignoreElements: (element) => {
-                        // Skip the download button
-                        return element.id === 'downloadBtn';
+                // Get all form values
+                const formData = {};
+                const inputs = sheet.querySelectorAll('input, textarea');
+                inputs.forEach((input, index) => {
+                    if (input.type === 'checkbox') {
+                        formData[`input_${index}`] = input.checked;
+                    } else {
+                        formData[`input_${index}`] = input.value;
                     }
                 });
                 
-                // Create download link
-                const link = document.createElement('a');
-                link.download = 'astraview-character-sheet.png';
-                link.href = captureCanvas.toDataURL('image/png', 0.9);
-                link.click();
+                // Get portrait image if exists
+                const portraitImg = document.getElementById('portraitImage');
+                const portraitSrc = portraitImg.style.display !== 'none' ? portraitImg.src : null;
+                
+                // Write clean HTML to new window
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>ASTRaview Character Sheet</title>
+                        <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+                        <style>
+                            body { margin: 0; padding: 0; font-family: 'Exo 2', sans-serif; background: #0F0B1A !important; color: #E0F7FA; }
+                            .sheet { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 15mm; background: #0F0B1A !important; }
+                            .header { height: 40mm; background: linear-gradient(135deg, #2E1A47 0%, #0F0B1A 100%); border-radius: 8px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; margin-bottom: 12mm; }
+                            .logo { font-family: 'Orbitron', monospace; font-weight: 700; font-size: 18pt; color: #00F5FF; }
+                            .sheet-title { font-family: 'Exo 2', sans-serif; font-weight: 600; font-size: 16pt; color: #E0F7FA; }
+                            .portrait { width: 40mm; height: 40mm; border: 2px solid #00F5FF; border-radius: 50%; background: rgba(26, 20, 42, 0.5); overflow: hidden; }
+                            .portrait img { width: 100%; height: 100%; object-fit: cover; }
+                            .main-content { display: flex; gap: 12mm; margin-bottom: 12mm; }
+                            .left-column, .right-column { flex: 1; }
+                            .section { background: rgba(26, 20, 42, 0.3); border-radius: 8px; padding: 8mm; margin-bottom: 8mm; border: 1px solid rgba(46, 26, 71, 0.5); }
+                            .section-title { font-family: 'Exo 2', sans-serif; font-weight: 700; font-size: 12pt; color: #00F5FF; margin-bottom: 8mm; text-transform: uppercase; letter-spacing: 1px; }
+                            .field-group { margin-bottom: 6mm; }
+                            .field-label { font-family: 'Exo 2', sans-serif; font-weight: 400; font-size: 10pt; color: #E0F7FA; margin-bottom: 2mm; display: block; }
+                            .field-value { background: rgba(26, 20, 42, 0.8); border: 1px solid rgba(0, 245, 255, 0.4); color: #E0F7FA; padding: 6px; border-radius: 4px; font-family: 'Exo 2', sans-serif; font-size: 10pt; width: 100%; min-height: 20px; }
+                            .checkbox-group { display: flex; gap: 15px; margin-bottom: 6mm; }
+                            .checkbox-item { display: flex; align-items: center; gap: 6px; }
+                            .checkbox { width: 4mm; height: 4mm; border: 1px solid #00F5FF; background: transparent; border-radius: 2px; position: relative; }
+                            .checkbox.checked { background: #00F5FF; }
+                            .checkbox.checked::after { content: '✓'; position: absolute; top: -2px; left: 0; color: #0F0B1A; font-size: 8px; font-weight: bold; }
+                            .attributes-table { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 6mm; }
+                            .attribute-item { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(26, 20, 42, 0.4); border-radius: 4px; border: 1px solid rgba(46, 26, 71, 0.5); }
+                            .attribute-name { font-weight: 500; color: #E0F7FA; }
+                            .attribute-value { width: 30px; background: transparent; border: none; border-bottom: 1px solid #00F5FF; color: #00F5FF; text-align: center; font-weight: bold; }
+                            .spheres-list { display: flex; flex-direction: column; gap: 6px; }
+                            .sphere-item { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(26, 20, 42, 0.4); border-radius: 4px; border: 1px solid rgba(46, 26, 71, 0.5); }
+                            .bonus-input { width: 40px; background: transparent; border: none; border-bottom: 1px solid #B87333; color: #B87333; text-align: center; font-weight: bold; }
+                            .racial-gift { display: flex; flex-direction: column; gap: 8px; }
+                            .level-energy { display: flex; gap: 20px; align-items: center; }
+                            .bottom-section { background: rgba(26, 20, 42, 0.3); border-radius: 8px; padding: 12mm; border: 1px solid rgba(46, 26, 71, 0.5); }
+                            .skills-list { margin-bottom: 8mm; }
+                            .skill-item { display: flex; align-items: center; margin-bottom: 4px; }
+                            .inventory-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+                            .resources { display: flex; gap: 15px; margin-top: 6mm; }
+                            .resource-item { display: flex; align-items: center; gap: 6px; }
+                            .separator { height: 1px; background: rgba(46, 26, 71, 0.5); margin: 8mm 0; }
+                            .inventory-detailed { margin-top: 8mm; }
+                            .inventory-sections { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+                            .inventory-column { display: flex; flex-direction: column; }
+                            .artifact-entry { background: rgba(26, 20, 42, 0.4); border-radius: 6px; padding: 8px; margin-bottom: 12px; border: 1px solid rgba(184, 115, 51, 0.3); }
+                            .note { font-style: italic; font-size: 8pt; color: #8A8A9E; margin-top: 4mm; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="sheet">
+                            <div class="header">
+                                <div class="sheet-title">Лист персонажа</div>
+                                <div class="logo">ASTRAVIEW</div>
+                            </div>
+                            
+                            <div class="main-content">
+                                <div class="left-column">
+                                    <div class="section">
+                                        <div class="section-title">Основное</div>
+                                        <div style="display: flex; gap: 12mm; align-items: flex-start; margin-bottom: 8mm;">
+                                            <div style="flex: 1;">
+                                                <div class="field-group">
+                                                    <label class="field-label">Имя:</label>
+                                                    <div class="field-value">${formData.input_0 || ''}</div>
+                                                </div>
+                                                <div class="field-group">
+                                                    <label class="field-label">Раса:</label>
+                                                    <div class="field-value">${formData.input_1 || ''}</div>
+                                                </div>
+                                            </div>
+                                            <div class="portrait">
+                                                ${portraitSrc ? `<img src="${portraitSrc}" alt="Portrait">` : ''}
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="field-group">
+                                            <label class="field-label">Роль:</label>
+                                            <div class="checkbox-group">
+                                                <div class="checkbox-item">
+                                                    <div class="checkbox ${formData.input_3 ? 'checked' : ''}"></div>
+                                                    <label>Астральный</label>
+                                                </div>
+                                                <div class="checkbox-item">
+                                                    <div class="checkbox ${formData.input_4 ? 'checked' : ''}"></div>
+                                                    <label>Инородный</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="field-group">
+                                            <label class="field-label">Внешность:</label>
+                                            <div class="field-value" style="min-height: 60px;">${formData.input_5 || ''}</div>
+                                        </div>
+                                        
+                                        <div class="field-group">
+                                            <label class="field-label">Происхождение:</label>
+                                            <div class="field-value">${formData.input_6 || ''}</div>
+                                        </div>
+                                        
+                                        <div class="field-group">
+                                            <label class="field-label">Цель:</label>
+                                            <div class="field-value">${formData.input_7 || ''}</div>
+                                        </div>
+                                        
+                                        <div class="field-group">
+                                            <label class="field-label">Мотив:</label>
+                                            <div class="field-value">${formData.input_8 || ''}</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="section">
+                                        <div class="section-title">Атрибуты</div>
+                                        <div class="attributes-table">
+                                            <div class="attribute-item">
+                                                <span class="attribute-name">🧠 Разум:</span>
+                                                <span class="attribute-value">${formData.input_9 || ''}</span>
+                                            </div>
+                                            <div class="attribute-item">
+                                                <span class="attribute-name">💪 Воля:</span>
+                                                <span class="attribute-value">${formData.input_10 || ''}</span>
+                                            </div>
+                                            <div class="attribute-item">
+                                                <span class="attribute-name">🦾 Конечности:</span>
+                                                <span class="attribute-value">${formData.input_11 || ''}</span>
+                                            </div>
+                                            <div class="attribute-item">
+                                                <span class="attribute-name">❤️ Плоть:</span>
+                                                <span class="attribute-value">${formData.input_12 || ''}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="right-column">
+                                    <div class="section">
+                                        <div class="section-title">Сферы действия</div>
+                                        <div class="spheres-list">
+                                            <div class="sphere-item">
+                                                <span>Исследование:</span>
+                                                <div style="display: flex; align-items: center; gap: 4px;">
+                                                    <span>+</span>
+                                                    <span class="bonus-input">${formData.input_13 || ''}</span>
+                                                </div>
+                                            </div>
+                                            <div class="sphere-item">
+                                                <span>Влияние:</span>
+                                                <div style="display: flex; align-items: center; gap: 4px;">
+                                                    <span>+</span>
+                                                    <span class="bonus-input">${formData.input_14 || ''}</span>
+                                                </div>
+                                            </div>
+                                            <div class="sphere-item">
+                                                <span>Инженерия:</span>
+                                                <div style="display: flex; align-items: center; gap: 4px;">
+                                                    <span>+</span>
+                                                    <span class="bonus-input">${formData.input_15 || ''}</span>
+                                                </div>
+                                            </div>
+                                            <div class="sphere-item">
+                                                <span>Выживание:</span>
+                                                <div style="display: flex; align-items: center; gap: 4px;">
+                                                    <span>+</span>
+                                                    <span class="bonus-input">${formData.input_16 || ''}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="note">+2 к двум, +1 к одной, 0 к одной</div>
+                                    </div>
+
+                                    <div class="section">
+                                        <div class="section-title">Расовый дар</div>
+                                        
+                                        <div class="field-group">
+                                            <label class="field-label">Расовый дар:</label>
+                                            <div class="field-value">${formData.input_17 || ''}</div>
+                                        </div>
+                                        
+                                        <div class="racial-gift">
+                                            <div class="checkbox-item">
+                                                <div class="checkbox ${formData.input_18 ? 'checked' : ''}"></div>
+                                                <label>Не пробуждён</label>
+                                            </div>
+                                            <div class="checkbox-item">
+                                                <div class="checkbox ${formData.input_19 ? 'checked' : ''}"></div>
+                                                <label>Этап 1: Инстинкт</label>
+                                            </div>
+                                            <div class="checkbox-item">
+                                                <div class="checkbox ${formData.input_20 ? 'checked' : ''}"></div>
+                                                <label>Этап 2: Память</label>
+                                            </div>
+                                            <div class="checkbox-item">
+                                                <div class="checkbox ${formData.input_21 ? 'checked' : ''}"></div>
+                                                <label>Этап 3: Пробуждение</label>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="field-group" style="margin-top: 8mm;">
+                                            <label class="field-label">Описание:</label>
+                                            <div class="field-value" style="min-height: 60px;">${formData.input_22 || ''}</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="section">
+                                        <div class="level-energy">
+                                            <div class="field-group">
+                                                <label class="field-label">Уровень:</label>
+                                                <div class="field-value" style="width: 60px;">${formData.input_23 || ''}</div>
+                                            </div>
+                                            <div class="field-group">
+                                                <label class="field-label">⚡ Энергия:</label>
+                                                <div class="field-value" style="width: 60px;">${formData.input_24 || ''}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bottom-section">
+                                <div class="section-title">Инвентарь и умения</div>
+                                
+                                <div class="skills-list">
+                                    <h4 style="color: #B87333; margin-bottom: 8px;">Умения:</h4>
+                                    <div class="skill-item">
+                                        <div class="field-value">${formData.input_25 || ''}</div>
+                                    </div>
+                                    <div class="skill-item">
+                                        <div class="field-value">${formData.input_26 || ''}</div>
+                                    </div>
+                                    <div class="skill-item">
+                                        <div class="field-value">${formData.input_27 || ''}</div>
+                                    </div>
+                                    <div class="skill-item">
+                                        <div class="field-value">${formData.input_28 || ''}</div>
+                                    </div>
+                                    <div class="skill-item">
+                                        <div class="field-value">${formData.input_29 || ''}</div>
+                                    </div>
+                                </div>
+
+                                <div class="separator"></div>
+
+                                <div class="inventory-grid">
+                                    <div>
+                                        <div class="field-group">
+                                            <label class="field-label">⚔️ Оружие:</label>
+                                            <div class="field-value">${formData.input_30 || ''}</div>
+                                        </div>
+                                        <div class="field-group">
+                                            <label class="field-label">🛡️ Броня:</label>
+                                            <div style="display: flex; gap: 8px; align-items: center;">
+                                                <div class="field-value" style="flex: 1;">${formData.input_31 || ''}</div>
+                                                <span style="color: #B87333;">(КД:</span>
+                                                <div class="field-value" style="width: 50px;">${formData.input_32 || ''}</div>
+                                                <span style="color: #B87333;">)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="field-group">
+                                            <label class="field-label">✨ Артефакты:</label>
+                                            <div class="field-value">${formData.input_33 || ''}</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="resources">
+                                    <div class="resource-item">
+                                        <label class="field-label">⛽ Топливо:</label>
+                                        <div class="field-value" style="width: 60px;">${formData.input_34 || ''}</div>
+                                    </div>
+                                    <div class="resource-item">
+                                        <label class="field-label">💎 Кристаллы:</label>
+                                        <div class="field-value" style="width: 60px;">${formData.input_35 || ''}</div>
+                                    </div>
+                                    <div class="resource-item">
+                                        <label class="field-label">📦 Припасы:</label>
+                                        <div class="field-value" style="width: 60px;">${formData.input_36 || ''}</div>
+                                    </div>
+                                </div>
+
+                                <div class="separator"></div>
+
+                                <div class="inventory-detailed">
+                                    <div class="section-title" style="margin-bottom: 8mm;">Детальный инвентарь</div>
+                                    
+                                    <div class="inventory-sections">
+                                        <div class="inventory-column">
+                                            <h4 style="color: #00F5FF; margin-bottom: 8px; font-size: 11pt;">📦 Предметы и снаряжение:</h4>
+                                            <div class="field-value" style="min-height: 200px; white-space: pre-wrap;">${formData.input_37 || ''}</div>
+                                        </div>
+
+                                        <div class="inventory-column">
+                                            <h4 style="color: #B87333; margin-bottom: 8px; font-size: 11pt;">✨ Артефакты и особые предметы:</h4>
+                                            <div class="artifact-entry">
+                                                <div class="field-value" style="margin-bottom: 4px;">${formData.input_38 || 'Название артефакта'}</div>
+                                                <div style="display: flex; gap: 8px; margin-bottom: 4px;">
+                                                    <div class="field-value" style="flex: 1;">${formData.input_39 || 'Тип'}</div>
+                                                    <div class="field-value" style="flex: 1;">${formData.input_40 || 'Редкость'}</div>
+                                                </div>
+                                                <div class="field-value" style="min-height: 40px; white-space: pre-wrap;">${formData.input_41 || 'Эффект и описание'}</div>
+                                            </div>
+                                            <div class="artifact-entry">
+                                                <div class="field-value" style="margin-bottom: 4px;">${formData.input_42 || 'Название артефакта'}</div>
+                                                <div style="display: flex; gap: 8px; margin-bottom: 4px;">
+                                                    <div class="field-value" style="flex: 1;">${formData.input_43 || 'Тип'}</div>
+                                                    <div class="field-value" style="flex: 1;">${formData.input_44 || 'Редкость'}</div>
+                                                </div>
+                                                <div class="field-value" style="min-height: 40px; white-space: pre-wrap;">${formData.input_45 || 'Эффект и описание'}</div>
+                                            </div>
+                                            <div class="artifact-entry">
+                                                <div class="field-value" style="margin-bottom: 4px;">${formData.input_46 || 'Название артефакта'}</div>
+                                                <div style="display: flex; gap: 8px; margin-bottom: 4px;">
+                                                    <div class="field-value" style="flex: 1;">${formData.input_47 || 'Тип'}</div>
+                                                    <div class="field-value" style="flex: 1;">${formData.input_48 || 'Редкость'}</div>
+                                                </div>
+                                                <div class="field-value" style="min-height: 40px; white-space: pre-wrap;">${formData.input_49 || 'Эффект и описание'}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <script>
+                            // Auto-print when loaded
+                            window.onload = function() {
+                                setTimeout(() => {
+                                    window.print();
+                                    setTimeout(() => {
+                                        window.close();
+                                    }, 1000);
+                                }, 500);
+                            };
+                        </script>
+                    <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'986eefc0a0178dbc',t:'MTc1OTE4NTE0Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+                    </html>
+                `);
+                
+                printWindow.document.close();
                 
             } catch (error) {
                 console.error('Export failed:', error);
-                
-                // Fallback: try browser print to PDF
-                try {
-                    const printWindow = window.open('', '_blank');
-                    printWindow.document.write(`
-                        <html>
-                        <head>
-                            <title>ASTRaview Character Sheet</title>
-                            <style>
-                                body { margin: 0; padding: 20px; background: #0F0B1A; }
-                                @media print { body { background: #0F0B1A !important; } }
-                            </style>
-                        </head>
-                        <body>
-                            ${sheet.outerHTML}
-                        </body>
-                        </html>
-                    `);
-                    printWindow.document.close();
-                    printWindow.print();
-                } catch (printError) {
-                    alert('Не удалось экспортировать лист. Попробуйте использовать функцию печати браузера.');
-                }
+                alert('Не удалось экспортировать лист. Попробуйте заполнить форму и повторить попытку.');
             }
-            
-            downloadBtn.style.display = 'block';
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'986ee58be4bc8d65',t:'MTc1OTE4NDcyOS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
